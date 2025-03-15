@@ -1,10 +1,9 @@
 /****************************************************************************
  * SCRIPT.JS
  * 1) Tab switching, slider updates, and accordion toggling
- * 2) DCE coefficients for FETP (updated for new attributes)
- * 3) Mandatory user inputs and dynamic recommendations
- * 4) Chart rendering for WTP, uptake, and cost–benefit
- * 5) Scenario saving and PDF export
+ * 2) DCE model for FETP with updated attributes and restrictions
+ * 3) Chart rendering for WTP, predicted uptake, and detailed cost–benefit analysis
+ * 4) Scenario saving and PDF export
  ****************************************************************************/
 
 /** On DOM load, set up tabs and accordion toggles */
@@ -54,55 +53,86 @@ const mainCoefficients = {
   training_advanced: 0.527,
   // Training Model (Reference: In-service)
   trainingModel_scholarship: 0.300,
-  // Stipend Amount (levels in USD)
+  // Stipend Amount (USD levels)
   stipend_levels: {
     500: 0,
     1000: 0.15,
     1500: 0.30,
     2000: 0.45
   },
-  // Annual Training Capacity (levels)
+  // Annual Training Capacity (USD levels)
   capacity_levels: {
     100: 0.30,
     500: 0,
-    1000: -0.30
+    1000: -0.30,
+    1500: -0.50,
+    2000: -0.70
   },
-  // Fee effect (cost coefficient)
-  cost: -0.00005  // Adjusted for realistic fee values (e.g. $5000 default)
+  // Fee effect (per USD)
+  cost: -0.00005,
+  // FETP Type
+  fetpType: {
+    frontlineFETP: 0.30,
+    advancedFETP: 0
+  },
+  // Delivery Method (Reference: Online)
+  delivery_inperson: 0.426,
+  delivery_hybrid: 0.189,
+  // Number of Training Sites
+  trainingSites: {
+    centralized: -0.15,
+    stateCapitals: 0,
+    zonalCenters: 0.10,
+    decentralized: 0.20
+  }
 };
 
 /** Build scenario from user inputs */
 function buildFETPScenario(){
   const levelTraining = document.querySelector('input[name="levelTraining"]:checked')?.value;
-  if(!levelTraining){
-    alert("Please select a Level of Training.");
-    return null;
-  }
+  if(!levelTraining){ alert("Please select a Level of Training."); return null; }
+  
   const trainingModel = document.querySelector('input[name="trainingModel"]:checked')?.value;
-  if(!trainingModel){
-    alert("Please select a Training Model.");
-    return null;
-  }
+  if(!trainingModel){ alert("Please select a Training Model."); return null; }
+  
   const stipendAmount = document.querySelector('input[name="stipendAmount"]:checked')?.value;
-  if(!stipendAmount){
-    alert("Please select a Stipend Amount.");
-    return null;
-  }
+  if(!stipendAmount){ alert("Please select a Stipend Amount."); return null; }
+  
   const annualCapacity = document.querySelector('input[name="annualCapacity"]:checked')?.value;
-  if(!annualCapacity){
-    alert("Please select an Annual Training Capacity.");
-    return null;
-  }
+  if(!annualCapacity){ alert("Please select an Annual Training Capacity."); return null; }
+  
   const feeSlider = document.getElementById("costSliderFETP");
   let fee = 5000;
   if(feeSlider) fee = parseInt(feeSlider.value, 10);
+  
+  const fetpType = document.querySelector('input[name="fetpType"]:checked')?.value;
+  if(!fetpType){ alert("Please select a FETP Type."); return null; }
+  
+  const deliveryMethod = document.querySelector('input[name="deliveryMethod"]:checked')?.value;
+  if(!deliveryMethod){ alert("Please select a Delivery Method."); return null; }
+  
+  const trainingSites = document.querySelector('input[name="trainingSites"]:checked')?.value;
+  if(!trainingSites){ alert("Please select a Number of Training Sites."); return null; }
+  
+  // Restriction: if levelTraining is advanced, then fetpType must be advancedFETP; if frontline then must be frontlineFETP.
+  if(levelTraining === "advanced" && fetpType !== "advancedFETP"){
+    alert("For Advanced Level of Training, FETP Type must be Advanced FETP.");
+    return null;
+  }
+  if(levelTraining === "frontline" && fetpType !== "frontlineFETP"){
+    alert("For Frontline Level of Training, FETP Type must be Frontline FETP.");
+    return null;
+  }
   
   return {
     levelTraining,
     trainingModel,
     stipendAmount: parseInt(stipendAmount, 10),
     annualCapacity: parseInt(annualCapacity, 10),
-    fee
+    fee,
+    fetpType,
+    deliveryMethod,
+    trainingSites
   };
 }
 
@@ -112,8 +142,8 @@ function computeFETPUptake(sc){
   
   // Level of Training
   if(sc.levelTraining === "frontline") U += mainCoefficients.training_frontline;
-  if(sc.levelTraining === "intermediate") U += mainCoefficients.training_intermediate;
-  if(sc.levelTraining === "advanced") U += mainCoefficients.training_advanced;
+  else if(sc.levelTraining === "intermediate") U += mainCoefficients.training_intermediate;
+  else if(sc.levelTraining === "advanced") U += mainCoefficients.training_advanced;
   
   // Training Model
   if(sc.trainingModel === "scholarship") U += mainCoefficients.trainingModel_scholarship;
@@ -125,6 +155,18 @@ function computeFETPUptake(sc){
   // Annual Training Capacity
   if(sc.annualCapacity in mainCoefficients.capacity_levels)
     U += mainCoefficients.capacity_levels[sc.annualCapacity];
+  
+  // FETP Type
+  if(sc.fetpType in mainCoefficients.fetpType)
+    U += mainCoefficients.fetpType[sc.fetpType];
+  
+  // Delivery Method
+  if(sc.deliveryMethod === "inperson") U += mainCoefficients.delivery_inperson;
+  else if(sc.deliveryMethod === "hybrid") U += mainCoefficients.delivery_hybrid;
+  
+  // Number of Training Sites
+  if(sc.trainingSites in mainCoefficients.trainingSites)
+    U += mainCoefficients.trainingSites[sc.trainingSites];
   
   // Fee per Training Completion effect
   U += mainCoefficients.cost * sc.fee;
@@ -143,7 +185,7 @@ function openFETPScenario(){
   
   let recommendation = "";
   if(pct < 30){
-    recommendation = "Uptake is low. Consider reducing the fee or adjusting programme features.";
+    recommendation = "Uptake is low. Consider reducing the fee or revising programme features.";
   } else if(pct < 70){
     recommendation = "Uptake is moderate. Small adjustments may further boost participation.";
   } else {
@@ -175,17 +217,22 @@ function renderWTPChart(){
   
   function ratio(coef){ return (coef / -mainCoefficients.cost) * 1; }
   const labels = [
-    "Training: Advanced","Training: Frontline",
-    "Training Model: Scholarship","Stipend Increment",
-    "Capacity Variation","Fee Increment"
+    "Training: Advanced", "Training: Frontline",
+    "Training Model: Scholarship", "Stipend Increment",
+    "Capacity Variation", "FETP Type (Frontline vs Advanced)",
+    "Delivery Method: In-person", "Fee Increment",
+    "Training Sites"
   ];
   const rawVals = [
     ratio(mainCoefficients.training_advanced),
     ratio(mainCoefficients.training_frontline),
     ratio(mainCoefficients.trainingModel_scholarship),
-    ratio(mainCoefficients.stipend_levels[1000]), // example: $500 -> $1000 difference
+    ratio(mainCoefficients.stipend_levels[1000]), // example increment
     ratio(mainCoefficients.capacity_levels[100]),
-    ratio(mainCoefficients.cost) * 1000  // scaled example
+    ratio(mainCoefficients.fetpType.frontlineFETP),
+    ratio(mainCoefficients.delivery_inperson),
+    ratio(mainCoefficients.cost) * 1000,
+    ratio(mainCoefficients.trainingSites.zonalCenters)
   ];
   const errs = rawVals.map(v => Math.abs(v)*0.1);
   
@@ -211,16 +258,10 @@ function renderWTPChart(){
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: {
-        y: { min: yMin, max: yMax }
-      },
+      scales: { y: { min: yMin, max: yMax } },
       plugins: {
         legend: { display: false },
-        title: {
-          display: true,
-          text: "WTP (USD) for FETP Attributes",
-          font: { size: 16 }
-        }
+        title: { display: true, text: "WTP (USD) for FETP Attributes", font: { size: 16 } }
       }
     },
     plugins: [{
@@ -270,18 +311,14 @@ function renderFETPProbChart(){
       labels: ["Uptake", "Non-uptake"],
       datasets: [{
         data: [pct, 100 - pct],
-        backgroundColor: ["#28a745","#dc3545"]
+        backgroundColor: ["#28a745", "#dc3545"]
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        title: {
-          display: true,
-          text: `Predicted Uptake: ${pct.toFixed(2)}%`,
-          font: { size: 16 }
-        }
+        title: { display: true, text: `Predicted Uptake: ${pct.toFixed(2)}%`, font: { size: 16 } }
       }
     }
   });
@@ -294,9 +331,9 @@ function renderFETPCostsBenefits(){
   if(!sc) return;
   const uptakeFraction = computeFETPUptake(sc);
   const pct = uptakeFraction * 100;
-  const trainees = sc.annualCapacity; // number of participants equals selected capacity
+  const trainees = sc.annualCapacity; // number equals selected capacity
   
-  // QALY scenario: use selected value from dropdown
+  // QALY gain per participant based on dropdown
   let qVal = 0.05;
   const sel = document.getElementById("qalyFETPSelect");
   if(sel){
@@ -304,11 +341,11 @@ function renderFETPCostsBenefits(){
     else if(sel.value === "high") qVal = 0.08;
   }
   
-  // Total cost: fee * number of trainees plus fixed cost based on literature (~$35,500)
+  // Total cost: fee * number of trainees plus fixed cost (~$35,500)
   const fixedCost = 35500;
   const totalCost = sc.fee * trainees + fixedCost;
   
-  // Total QALYs and monetised benefits
+  // Monetised benefits calculation
   const totalQALY = trainees * qVal;
   const monetized = totalQALY * 50000;
   const netB = monetized - totalCost;
@@ -348,7 +385,7 @@ function renderFETPCostsBenefits(){
       datasets: [{
         label: "USD",
         data: [totalCost, monetized, netB],
-        backgroundColor: ["#c0392b","#27ae60","#f1c40f"]
+        backgroundColor: ["#c0392b", "#27ae60", "#f1c40f"]
       }]
     },
     options: {
@@ -356,11 +393,7 @@ function renderFETPCostsBenefits(){
       maintainAspectRatio: false,
       scales: { y: { beginAtZero: false } },
       plugins: {
-        title: {
-          display: true,
-          text: "Cost-Benefit Analysis (FETP)",
-          font: { size: 16 }
-        },
+        title: { display: true, text: "Cost-Benefit Analysis (FETP)", font: { size: 16 } },
         legend: { display: false }
       }
     }
@@ -405,6 +438,9 @@ function saveFETPScenario(){
     <td>${sc.trainingModel}</td>
     <td>$${sc.stipendAmount}</td>
     <td>${sc.annualCapacity}</td>
+    <td>${sc.fetpType}</td>
+    <td>${sc.deliveryMethod}</td>
+    <td>${sc.trainingSites}</td>
     <td>${sc.uptake}%</td>
     <td>$${sc.netBenefit}</td>
   `;
@@ -438,6 +474,9 @@ function exportFETPComparison(){
     doc.text(`Model: ${sc.trainingModel}`, 15, yPos); yPos += 5;
     doc.text(`Stipend: $${sc.stipendAmount}`, 15, yPos); yPos += 5;
     doc.text(`Capacity: ${sc.annualCapacity}`, 15, yPos); yPos += 5;
+    doc.text(`FETP Type: ${sc.fetpType}`, 15, yPos); yPos += 5;
+    doc.text(`Delivery: ${sc.deliveryMethod}`, 15, yPos); yPos += 5;
+    doc.text(`Sites: ${sc.trainingSites}`, 15, yPos); yPos += 5;
     doc.text(`Uptake: ${sc.uptake}%, Net Benefit: $${sc.netBenefit}`, 15, yPos);
     yPos += 10;
   });
