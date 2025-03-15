@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EpiDecide - FETP Decision Aid Tool</title>
-  <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="styles.css" />
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         integrity="sha512-papNMzNnQn5h+1G+FHu8SyuXHs6A1k+Ln7tK5qRo1l5eYm6Jzv+1pArJ7N4C9FfpRrmAgM3tYWd3FZ9jKz1Bw=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"/>
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- jsPDF -->
@@ -19,7 +19,7 @@
   <header>
     <h1>FETP Decision Aid Tool</h1>
     <p>
-      This tool helps policy makers plan and scale Field Epidemiology Training Programs (FETP) by predicting programme uptake,
+      This tool helps policy makers plan and scale Field Epidemiology Training Programs (FETP) by forecasting programme uptake,
       evaluating cost–benefit tradeoffs, and comparing key programme features.
     </p>
   </header>
@@ -55,12 +55,12 @@
   <section id="introTab" class="tabcontent" tabindex="0" style="display: block;">
     <div class="intro-box">
       <p>
-        FETPs are critical for rapid public health responses. This decision aid uses discrete choice experiment (DCE)
-        estimates to forecast programme uptake, assess economic tradeoffs, and compare key programme features.
+        FETPs are critical for rapid public health responses. This decision aid uses discrete choice experiment estimates to forecast programme uptake,
+        assess economic tradeoffs, and compare key programme features.
       </p>
       <ul>
         <li><strong>Instructions</strong> – A simple guide to use the tool.</li>
-        <li><strong>Attributes</strong> – Understand the main features that define the training programme.</li>
+        <li><strong>Attributes</strong> – View a snapshot of the main programme features.</li>
         <li><strong>Inputs</strong> – Configure your programme options.</li>
         <li><strong>WTP Results</strong> – See estimated willingness-to-pay values.</li>
         <li><strong>Predicted Uptake</strong> – View the forecasted participation rate.</li>
@@ -76,98 +76,117 @@
       <h4>How to Use This Tool</h4>
       <ol>
         <li style="margin-left: 20px;">Review the <strong>Attributes</strong> tab for an overview of programme features.</li>
-        <li style="margin-left: 20px;">In the <strong>Inputs</strong> tab, select your desired Level of Training, Training Model, Stipend Amount, and Annual Training Capacity. Adjust the Fee per Training Completion using the slider. Then click “Calculate &amp; View Results.”</li>
-        <li style="margin-left: 20px;">All selections are required. Missing fields will trigger an alert.</li>
+        <li style="margin-left: 20px;">In the <strong>Inputs</strong> tab, select your desired options. Choose:
+          <ul>
+            <li>Level of Training (Frontline, Intermediate, Advanced)</li>
+            <li>Training Model (In-service or Scholarship-based)</li>
+            <li>Stipend Amount ($500, $1000, $1500, $2000)</li>
+            <li>Annual Training Capacity (100, 500, 1000, 1500, 2000 trainees)</li>
+            <li>FETP Type (Frontline FETP or Advanced FETP)</li>
+            <li>Delivery Method (In-person or Hybrid – with Online as reference)</li>
+            <li>Number of Training Sites (Single Centralized Hub, Multiple State Capitals, Zonal Regional Centers, Decentralized Rural Nodes)</li>
+          </ul>
+          Adjust the Fee per Training Completion using the slider. Then click “Calculate &amp; View Results.”
+        </li>
+        <li style="margin-left: 20px;">All selections are required. Incompatible combinations (e.g. Advanced level with Frontline FETP) will trigger an alert.</li>
         <li style="margin-left: 20px;">The <strong>WTP Results</strong> tab shows a bar chart with error estimates.</li>
-        <li style="margin-left: 20px;">The <strong>Predicted Uptake</strong> tab displays a doughnut chart of the forecasted participation.</li>
-        <li style="margin-left: 20px;">The <strong>Costs &amp; Benefits</strong> tab provides a breakdown of costs and estimated benefits, along with explanations.</li>
-        <li style="margin-left: 20px;">Saved scenarios can be compared and exported to PDF.</li>
+        <li style="margin-left: 20px;">The <strong>Predicted Uptake</strong> tab displays a doughnut chart of forecasted participation.</li>
+        <li style="margin-left: 20px;">The <strong>Costs &amp; Benefits</strong> tab provides an exhaustive economic summary with detailed explanations.</li>
+        <li style="margin-left: 20px;">Saved scenarios can be compared and exported as a PDF.</li>
       </ol>
     </div>
   </section>
 
-  <!-- Attributes Tab -->
+  <!-- Attributes Tab (Grid layout with info icons and tooltips) -->
   <section id="attributesTab" class="tabcontent" tabindex="0">
     <h2>Key Attributes</h2>
-    <div class="attributes-list">
-      <!-- Attribute Card 1: Level of Training -->
-      <div class="attribute-card" tabindex="0">
+    <div class="attributes-grid">
+      <!-- Attribute: Level of Training -->
+      <div class="attribute-card">
         <div class="attribute-icon">
-          <svg width="24" height="24" fill="#3498db" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#3498db" stroke-width="2" fill="none"/>
-            <path d="M12 6v6l4 2" stroke="#3498db" stroke-width="2" fill="none"/>
-          </svg>
-          <div class="tooltip" role="tooltip">
-            Choose the training duration: Frontline (3 months), Intermediate (12 months; reference), or Advanced (24 months).
-          </div>
+          <i class="fa-solid fa-hourglass-start"></i>
+          <span class="info-icon" data-tooltip="Select the duration: Frontline (3 months), Intermediate (12 months; ref), Advanced (24 months)."></span>
         </div>
         <div class="attribute-content">
           <h4>Level of Training</h4>
-          <p>3-month, 12-month, or 24-month programmes.</p>
+          <p>Frontline, Intermediate, or Advanced.</p>
         </div>
       </div>
-      <!-- Attribute Card 2: Training Model -->
-      <div class="attribute-card" tabindex="0">
+      <!-- Attribute: Training Model -->
+      <div class="attribute-card">
         <div class="attribute-icon">
-          <svg width="24" height="24" fill="#e67e22" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#e67e22" stroke-width="2" fill="none"/>
-            <path d="M12 4a8 8 0 0 1 0 16 8 8 0 0 1 0-16z" fill="#e67e22"/>
-          </svg>
-          <div class="tooltip" role="tooltip">
-            Participants can continue working while training (In-service; reference) or study full time with financial support (Scholarship-based).
-          </div>
+          <i class="fa-solid fa-user-tie"></i>
+          <span class="info-icon" data-tooltip="Participants can train while working (In-service; ref) or study full-time with support (Scholarship-based)."></span>
         </div>
         <div class="attribute-content">
           <h4>Training Model</h4>
-          <p>In-service or Scholarship-based training.</p>
+          <p>In-service or Scholarship-based.</p>
         </div>
       </div>
-      <!-- Attribute Card 3: Stipend Amount -->
-      <div class="attribute-card" tabindex="0">
+      <!-- Attribute: Stipend Amount -->
+      <div class="attribute-card">
         <div class="attribute-icon">
-          <svg width="24" height="24" fill="#27ae60" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#27ae60" stroke-width="2" fill="none"/>
-            <path d="M12 6v6l4 2" stroke="#27ae60" stroke-width="2" fill="none"/>
-          </svg>
-          <div class="tooltip" role="tooltip">
-            Financial support can reduce barriers. Options: $500 (reference), $1000, $1500, $2000.
-          </div>
+          <i class="fa-solid fa-hand-holding-usd"></i>
+          <span class="info-icon" data-tooltip="Stipend levels help overcome financial barriers: $500 (ref), $1000, $1500, $2000."></span>
         </div>
         <div class="attribute-content">
           <h4>Stipend Amount</h4>
-          <p>Incentives provided to participants.</p>
+          <p>$500, $1000, $1500, or $2000.</p>
         </div>
       </div>
-      <!-- Attribute Card 4: Annual Training Capacity -->
-      <div class="attribute-card" tabindex="0">
+      <!-- Attribute: Annual Training Capacity -->
+      <div class="attribute-card">
         <div class="attribute-icon">
-          <svg width="24" height="24" fill="#8e44ad" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#8e44ad" stroke-width="2" fill="none"/>
-            <path d="M8 12h8M12 8v8" stroke="#8e44ad" stroke-width="2" fill="none"/>
-          </svg>
-          <div class="tooltip" role="tooltip">
-            Choose the number of trainees per cycle. Options: 100, 500 (reference), 1000.
-          </div>
+          <i class="fa-solid fa-users"></i>
+          <span class="info-icon" data-tooltip="Indicates the number of trainees per cycle. Options: 100, 500 (ref), 1000, 1500, 2000."></span>
         </div>
         <div class="attribute-content">
           <h4>Annual Training Capacity</h4>
-          <p>Number of participants per training cycle.</p>
+          <p>100, 500, 1000, 1500, or 2000 trainees.</p>
         </div>
       </div>
-      <!-- Attribute Card 5: Fee per Training Completion -->
-      <div class="attribute-card" tabindex="0">
+      <!-- Attribute: FETP Type -->
+      <div class="attribute-card">
         <div class="attribute-icon">
-          <svg width="24" height="24" fill="#c0392b" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#c0392b" stroke-width="2" fill="none"/>
-            <path d="M10 15l-3-3 1.4-1.4 1.6 1.6L15 7l1.4 1.4-6.4 6.4z" fill="#c0392b"/>
-          </svg>
-          <div class="tooltip" role="tooltip">
-            This fee is charged upon completion of the training and depends on the training level.
-          </div>
+          <i class="fa-solid fa-briefcase"></i>
+          <span class="info-icon" data-tooltip="Choose the programme type: Frontline FETP (ref if Frontline training) or Advanced FETP (ref if Advanced training)."></span>
+        </div>
+        <div class="attribute-content">
+          <h4>FETP Type</h4>
+          <p>Frontline FETP or Advanced FETP.</p>
+        </div>
+      </div>
+      <!-- Attribute: Delivery Method -->
+      <div class="attribute-card">
+        <div class="attribute-icon">
+          <i class="fa-solid fa-mobile-screen"></i>
+          <span class="info-icon" data-tooltip="Delivery method: In-person or Hybrid. (Reference is Online.)"></span>
+        </div>
+        <div class="attribute-content">
+          <h4>Delivery Method</h4>
+          <p>In-person or Hybrid.</p>
+        </div>
+      </div>
+      <!-- Attribute: Number of Training Sites -->
+      <div class="attribute-card">
+        <div class="attribute-icon">
+          <i class="fa-solid fa-building-columns"></i>
+          <span class="info-icon" data-tooltip="Training sites: Single Centralized Hub, Multiple State Capitals (ref), Zonal Regional Centers, or Decentralized Rural Nodes."></span>
+        </div>
+        <div class="attribute-content">
+          <h4>Number of Training Sites</h4>
+          <p>Select the geographic distribution of training sites.</p>
+        </div>
+      </div>
+      <!-- Attribute: Fee per Training Completion -->
+      <div class="attribute-card">
+        <div class="attribute-icon">
+          <i class="fa-solid fa-dollar-sign"></i>
+          <span class="info-icon" data-tooltip="Fee charged on completion of training. This depends on the level and is adjusted using the slider below."></span>
         </div>
         <div class="attribute-content">
           <h4>Fee per Training Completion</h4>
-          <p>The amount charged to participants after training.</p>
+          <p>The cost charged to participants upon completion.</p>
         </div>
       </div>
     </div>
@@ -177,8 +196,9 @@
   <section id="inputsTab" class="tabcontent" tabindex="0">
     <div class="input-card">
       <h2>Configure FETP Attributes</h2>
-      <p>Select your options for the programme. Choose a Level of Training, Training Model, Stipend Amount, and Annual Training Capacity.
-         Adjust the Fee per Training Completion using the slider below. All fields are required.</p>
+      <p>
+        Select your programme options below. All fields are required. Note: Some combinations are restricted.
+      </p>
       <form onsubmit="event.preventDefault();">
         <div class="input-cards">
           <!-- Level of Training (Ref: Intermediate) -->
@@ -186,15 +206,15 @@
             <h3>Level of Training <span class="reference">(Ref: Intermediate)</span></h3>
             <div class="options">
               <label>
-                <input type="radio" name="levelTraining" id="frontlineRadio" value="frontline" />
+                <input type="radio" name="levelTraining" value="frontline" />
                 Frontline (3 months)
               </label>
               <label>
-                <input type="radio" name="levelTraining" id="intermediateRadio" value="intermediate" checked/>
+                <input type="radio" name="levelTraining" value="intermediate" checked/>
                 Intermediate (12 months)
               </label>
               <label>
-                <input type="radio" name="levelTraining" id="advancedRadio" value="advanced" />
+                <input type="radio" name="levelTraining" value="advanced" />
                 Advanced (24 months)
               </label>
             </div>
@@ -204,11 +224,11 @@
             <h3>Training Model <span class="reference">(Ref: In-service)</span></h3>
             <div class="options">
               <label>
-                <input type="radio" name="trainingModel" id="inserviceRadio" value="inservice" checked/>
+                <input type="radio" name="trainingModel" value="inservice" checked/>
                 In-service Training
               </label>
               <label>
-                <input type="radio" name="trainingModel" id="scholarshipRadio" value="scholarship" />
+                <input type="radio" name="trainingModel" value="scholarship" />
                 Scholarship-based Training
               </label>
             </div>
@@ -218,19 +238,19 @@
             <h3>Stipend Amount <span class="reference">(Ref: $500)</span></h3>
             <div class="options">
               <label>
-                <input type="radio" name="stipendAmount" id="stipend500" value="500" checked/>
+                <input type="radio" name="stipendAmount" value="500" checked/>
                 $500
               </label>
               <label>
-                <input type="radio" name="stipendAmount" id="stipend1000" value="1000" />
+                <input type="radio" name="stipendAmount" value="1000" />
                 $1000
               </label>
               <label>
-                <input type="radio" name="stipendAmount" id="stipend1500" value="1500" />
+                <input type="radio" name="stipendAmount" value="1500" />
                 $1500
               </label>
               <label>
-                <input type="radio" name="stipendAmount" id="stipend2000" value="2000" />
+                <input type="radio" name="stipendAmount" value="2000" />
                 $2000
               </label>
             </div>
@@ -240,16 +260,74 @@
             <h3>Annual Training Capacity <span class="reference">(Ref: 500 trainees)</span></h3>
             <div class="options">
               <label>
-                <input type="radio" name="annualCapacity" id="capacity100" value="100" />
+                <input type="radio" name="annualCapacity" value="100" />
                 100 trainees
               </label>
               <label>
-                <input type="radio" name="annualCapacity" id="capacity500" value="500" checked/>
+                <input type="radio" name="annualCapacity" value="500" checked/>
                 500 trainees
               </label>
               <label>
-                <input type="radio" name="annualCapacity" id="capacity1000" value="1000" />
+                <input type="radio" name="annualCapacity" value="1000" />
                 1000 trainees
+              </label>
+              <label>
+                <input type="radio" name="annualCapacity" value="1500" />
+                1500 trainees
+              </label>
+              <label>
+                <input type="radio" name="annualCapacity" value="2000" />
+                2000 trainees
+              </label>
+            </div>
+          </div>
+          <!-- FETP Type -->
+          <div class="input-level-card">
+            <h3>FETP Type</h3>
+            <div class="options">
+              <label>
+                <input type="radio" name="fetpType" value="frontlineFETP" checked/>
+                Frontline FETP
+              </label>
+              <label>
+                <input type="radio" name="fetpType" value="advancedFETP" />
+                Advanced FETP
+              </label>
+            </div>
+          </div>
+          <!-- Delivery Method (Ref: Online) -->
+          <div class="input-level-card">
+            <h3>Delivery Method <span class="reference">(Ref: Online)</span></h3>
+            <div class="options">
+              <label>
+                <input type="radio" name="deliveryMethod" value="inperson" checked/>
+                In-person
+              </label>
+              <label>
+                <input type="radio" name="deliveryMethod" value="hybrid" />
+                Hybrid
+              </label>
+            </div>
+          </div>
+          <!-- Number of Training Sites -->
+          <div class="input-level-card">
+            <h3>Number of Training Sites</h3>
+            <div class="options">
+              <label>
+                <input type="radio" name="trainingSites" value="centralized" />
+                Single Centralized Hub
+              </label>
+              <label>
+                <input type="radio" name="trainingSites" value="stateCapitals" checked/>
+                Multiple State Capitals
+              </label>
+              <label>
+                <input type="radio" name="trainingSites" value="zonalCenters" />
+                Zonal Regional Centers
+              </label>
+              <label>
+                <input type="radio" name="trainingSites" value="decentralized" />
+                Decentralized Rural Nodes
               </label>
             </div>
           </div>
@@ -285,7 +363,7 @@
     <div class="calculation-info">
       <h4>Willingness-to-Pay (WTP) Results</h4>
       <p>
-        WTP is estimated as the ratio of each attribute’s coefficient over the negative cost coefficient.
+        WTP is estimated as the ratio of each attribute’s coefficient over the negative fee coefficient.
         Hover over the bars to view error estimates.
       </p>
       <div class="buttons-row">
@@ -305,7 +383,7 @@
     <div class="calculation-info">
       <h4>Predicted Programme Uptake</h4>
       <p>
-        Click “Show Probability Plot” to view the forecasted participation rate as a doughnut chart.
+        Click “Show Probability Plot” to view the forecasted participation rate.
       </p>
       <div class="buttons-row">
         <button onclick="renderFETPProbChart()">Show Probability Plot</button>
@@ -324,11 +402,11 @@
     <div class="calculation-info">
       <h4>Costs &amp; Benefits Analysis</h4>
       <p>
-        This section estimates the total programme cost and the monetised benefits.
+        This section estimates the total programme cost and monetised benefits.
         <br>
         <small>
-          Benefits are calculated by multiplying the expected QALY gain per participant by the number of trainees and then by $50,000.
-          This reflects the potential economic gains from improved public health outcomes.
+          Benefits are calculated as: (QALY Gain per Participant × Number of Trainees × $50,000).
+          This approximates the economic value of improved public health outcomes.
         </small>
       </p>
       <div class="qaly-selector">
@@ -343,7 +421,8 @@
       <div class="modelling-assumptions">
         <h3><i class="fa-solid fa-lightbulb"></i> Assumptions</h3>
         <p>
-          The cost estimates are based on targeted literature and include both variable costs (fee charged per participant) and fixed costs (venue, materials, trainer fees, etc.).
+          Cost estimates are based on recent literature. Variable costs (participant fee) and fixed costs (venue, materials,
+          trainer fees, etc.) are combined to provide a comprehensive economic summary.
         </p>
       </div>
       <div class="cost-icons">
@@ -355,21 +434,21 @@
         <div class="accordion-item">
           <h3>Direct Costs</h3>
           <div class="accordion-content">
-            <h4>Training and Development</h4>
+            <h4>Training &amp; Development</h4>
             <ul>
               <li>Venue rental for workshops: ~$3,000</li>
-              <li>Training materials and content development: ~$7,000</li>
-              <li>Trainer and speaker compensation: ~$8,000</li>
+              <li>Training materials &amp; content development: ~$7,000</li>
+              <li>Trainer &amp; speaker compensation: ~$8,000</li>
             </ul>
-            <h4>Personnel and Technology</h4>
+            <h4>Personnel &amp; Technology</h4>
             <ul>
-              <li>Salaries and consultant fees: ~$10,000</li>
-              <li>Hardware, software, and IT support: ~$4,000</li>
+              <li>Salaries &amp; consultant fees: ~$10,000</li>
+              <li>Hardware, software, &amp; IT support: ~$4,000</li>
             </ul>
-            <h4>Logistics and Miscellaneous</h4>
+            <h4>Logistics &amp; Miscellaneous</h4>
             <ul>
-              <li>Travel, accommodation, and catering: ~$3,500</li>
-              <li>Printing, communication, and insurance: ~$2,000</li>
+              <li>Travel, accommodation, &amp; catering: ~$3,500</li>
+              <li>Printing, communication, &amp; insurance: ~$2,000</li>
             </ul>
           </div>
         </div>
@@ -377,7 +456,7 @@
           <h3>Fixed Costs</h3>
           <div class="accordion-content">
             <p>
-              A fixed cost of approximately ~$35,500 is assumed per training cycle to cover overheads and infrastructural investments.
+              A fixed cost of approximately ~$35,500 per training cycle is assumed to cover overheads and infrastructural investments.
             </p>
           </div>
         </div>
@@ -387,8 +466,7 @@
         <div class="cost-card">
           <h4><i class="fa-solid fa-hand-holding-dollar"></i> QALY Benefits</h4>
           <p>
-            Benefits are calculated as: (QALY Gain per Participant × Number of Trainees × $50,000).
-            This reflects the economic value of improved health outcomes.
+            Benefits = (QALY Gain per Participant × Number of Trainees × $50,000). This quantifies the potential economic gains from improved health outcomes.
           </p>
         </div>
       </div>
@@ -400,8 +478,8 @@
     <div class="calculation-info">
       <h4>Saved Scenarios</h4>
       <p>
-        Each scenario includes the selected options along with the computed uptake and net benefit.
-        You can export saved scenarios to PDF for side-by-side comparison.
+        Each scenario includes your selected options along with computed uptake and net benefit.
+        Export saved scenarios to PDF for side-by-side comparison.
       </p>
       <div class="buttons-row">
         <button onclick="saveFETPScenario()">Save Current Scenario</button>
@@ -417,6 +495,9 @@
               <th>Model</th>
               <th>Stipend</th>
               <th>Capacity</th>
+              <th>FETP Type</th>
+              <th>Delivery</th>
+              <th>Sites</th>
               <th>Uptake (%)</th>
               <th>Net Benefit (USD)</th>
             </tr>
