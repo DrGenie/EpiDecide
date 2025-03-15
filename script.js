@@ -1,26 +1,22 @@
 /****************************************************************************
  * SCRIPT.JS
- * 1) Tab switching with event listeners
- * 2) Range slider label updates
- * 3) DCE coefficients for FETP
- * 4) Mandatory user inputs
- * 5) WTP chart with dynamic scale
- * 6) Probability chart
- * 7) Cost–benefit chart
- * 8) Scenario saving & PDF export
+ * 1) Tab switching, slider updates, and accordion toggling
+ * 2) DCE coefficients for FETP (updated for new attributes)
+ * 3) Mandatory user inputs and dynamic recommendations
+ * 4) Chart rendering for WTP, uptake, and cost–benefit
+ * 5) Scenario saving and PDF export
  ****************************************************************************/
 
-/** On DOM load, set up tabs, default to introduction */
+/** On DOM load, set up tabs and accordion toggles */
 document.addEventListener("DOMContentLoaded", function(){
   const tabs = document.querySelectorAll(".tablink");
-  tabs.forEach(btn=>{
+  tabs.forEach(btn => {
     btn.addEventListener("click", function(){
       openTab(this.getAttribute("data-tab"), this);
     });
   });
   openTab("introTab", document.querySelector(".tablink"));
-
-  // Set up accordion header toggling
+  
   document.querySelectorAll(".accordion-item h3").forEach(item => {
     item.addEventListener("click", function(){
       const content = this.nextElementSibling;
@@ -43,129 +39,96 @@ function openTab(tabId, clickedBtn){
   clickedBtn.setAttribute("aria-selected", "true");
 }
 
-/** Sliders for cost & cohort label updates */
-function updateCohortDisplay(val){
-  document.getElementById("cohortLabel").textContent = val;
-}
+/** Slider label update */
 function updateFETPCostDisplay(val){
   document.getElementById("costLabelFETP").textContent = val;
 }
 
-/** Main DCE Coefficients */
+/** DCE Coefficients and attribute mappings */
 const mainCoefficients = {
   ASC_mean: -0.112,
-  ASC_sd: 1.161,
   ASC_optout: 0.131,
-
-  // Training level (Ref=Intermediate => 0)
-  training_advanced: 0.527,
+  // Level of Training (Reference: Intermediate)
   training_frontline: -0.349,
-
-  // Delivery (Ref=Online => 0)
-  delivery_inperson: 0.426,
-  delivery_hybrid: 0.189,
-
-  // Accreditation (Ref=None => 0)
-  accreditation_international: 0.617,
-  accreditation_national: 0.236,
-
-  // Location (Ref=District => 0)
-  location_statelevel: 0.385,
-  location_regional: 0.113,
-
-  // Continuous slopes
-  cohortsize: 0.059,  // interpret as slope * (cohort / 100)
-  cost: -0.036        // slope * costVal
+  training_intermediate: 0,
+  training_advanced: 0.527,
+  // Training Model (Reference: In-service)
+  trainingModel_scholarship: 0.300,
+  // Stipend Amount (levels in USD)
+  stipend_levels: {
+    500: 0,
+    1000: 0.15,
+    1500: 0.30,
+    2000: 0.45
+  },
+  // Annual Training Capacity (levels)
+  capacity_levels: {
+    100: 0.30,
+    500: 0,
+    1000: -0.30
+  },
+  // Fee effect (cost coefficient)
+  cost: -0.00005  // Adjusted for realistic fee values (e.g. $5000 default)
 };
 
-/** Build scenario with mandatory checks */
+/** Build scenario from user inputs */
 function buildFETPScenario(){
-  // training => mandatory
-  let trainingLevel = null;
-  if(document.getElementById("frontlineCheck").checked) trainingLevel = "frontline";
-  if(document.getElementById("advancedCheck").checked)  trainingLevel = "advanced";
-  if(!trainingLevel){
-    alert("Please select a Training Level: Frontline or Advanced.");
+  const levelTraining = document.querySelector('input[name="levelTraining"]:checked')?.value;
+  if(!levelTraining){
+    alert("Please select a Level of Training.");
     return null;
   }
-
-  // delivery => mandatory
-  let deliveryMethod = null;
-  if(document.getElementById("inpersonCheck").checked) deliveryMethod = "inperson";
-  if(document.getElementById("hybridCheck").checked)   deliveryMethod = "hybrid";
-  if(!deliveryMethod){
-    alert("Please select a Delivery Method: In-person or Hybrid.");
+  const trainingModel = document.querySelector('input[name="trainingModel"]:checked')?.value;
+  if(!trainingModel){
+    alert("Please select a Training Model.");
     return null;
   }
-
-  // accreditation => mandatory
-  let accreditation = null;
-  if(document.getElementById("nationalCheck").checked)      accreditation = "national";
-  if(document.getElementById("internationalCheck").checked) accreditation = "international";
-  if(!accreditation){
-    alert("Please select an Accreditation: National or International.");
+  const stipendAmount = document.querySelector('input[name="stipendAmount"]:checked')?.value;
+  if(!stipendAmount){
+    alert("Please select a Stipend Amount.");
     return null;
   }
-
-  // location => mandatory
-  let location = null;
-  if(document.getElementById("stateCheck").checked)    location = "state";
-  if(document.getElementById("regionalCheck").checked) location = "regional";
-  if(!location){
-    alert("Please select a Location: State-level or Regional centers.");
+  const annualCapacity = document.querySelector('input[name="annualCapacity"]:checked')?.value;
+  if(!annualCapacity){
+    alert("Please select an Annual Training Capacity.");
     return null;
   }
-
-  // cohort => from slider
-  const cVal = document.getElementById("cohortSlider");
-  let cSize = 500;
-  if(cVal) cSize = parseInt(cVal.value,10);
-
-  // cost => from slider
-  const costSlider = document.getElementById("costSliderFETP");
-  let costVal = 50;
-  if(costSlider) costVal = parseInt(costSlider.value,10);
-
+  const feeSlider = document.getElementById("costSliderFETP");
+  let fee = 5000;
+  if(feeSlider) fee = parseInt(feeSlider.value, 10);
+  
   return {
-    trainingLevel,
-    deliveryMethod,
-    accreditation,
-    location,
-    cohortSize: cSize,
-    costVal
+    levelTraining,
+    trainingModel,
+    stipendAmount: parseInt(stipendAmount, 10),
+    annualCapacity: parseInt(annualCapacity, 10),
+    fee
   };
 }
 
-/** Compute uptake with final logic:
- *  U = ASC + sumOfDiscrete + slope_cohort*(cohort/100) + slope_cost*(costVal)
- */
+/** Compute uptake using the DCE model */
 function computeFETPUptake(sc){
   let U = mainCoefficients.ASC_mean;
-
-  // training
-  if(sc.trainingLevel === "advanced")   U += mainCoefficients.training_advanced;
-  if(sc.trainingLevel === "frontline") U += mainCoefficients.training_frontline;
-
-  // delivery
-  if(sc.deliveryMethod === "inperson") U += mainCoefficients.delivery_inperson;
-  if(sc.deliveryMethod === "hybrid")   U += mainCoefficients.delivery_hybrid;
-
-  // accreditation
-  if(sc.accreditation === "international") U += mainCoefficients.accreditation_international;
-  if(sc.accreditation === "national")      U += mainCoefficients.accreditation_national;
-
-  // location
-  if(sc.location === "state")    U += mainCoefficients.location_statelevel;
-  if(sc.location === "regional") U += mainCoefficients.location_regional;
-
-  // continuous: interpret cohort in units of 100
-  const cUnits = sc.cohortSize / 100.0;
-  U += mainCoefficients.cohortsize * cUnits;
-
-  // cost slope => sc.costVal
-  U += mainCoefficients.cost * sc.costVal;
-
-  // logit
+  
+  // Level of Training
+  if(sc.levelTraining === "frontline") U += mainCoefficients.training_frontline;
+  if(sc.levelTraining === "intermediate") U += mainCoefficients.training_intermediate;
+  if(sc.levelTraining === "advanced") U += mainCoefficients.training_advanced;
+  
+  // Training Model
+  if(sc.trainingModel === "scholarship") U += mainCoefficients.trainingModel_scholarship;
+  
+  // Stipend Amount
+  if(sc.stipendAmount in mainCoefficients.stipend_levels)
+    U += mainCoefficients.stipend_levels[sc.stipendAmount];
+  
+  // Annual Training Capacity
+  if(sc.annualCapacity in mainCoefficients.capacity_levels)
+    U += mainCoefficients.capacity_levels[sc.annualCapacity];
+  
+  // Fee per Training Completion effect
+  U += mainCoefficients.cost * sc.fee;
+  
   const altExp = Math.exp(U);
   const optExp = Math.exp(mainCoefficients.ASC_optout);
   return altExp / (altExp + optExp);
@@ -174,77 +137,65 @@ function computeFETPUptake(sc){
 /** "Calculate & View Results" */
 function openFETPScenario(){
   const scenario = buildFETPScenario();
-  if(!scenario) return; // mandatory check failed
+  if(!scenario) return;
   const fraction = computeFETPUptake(scenario);
   const pct = fraction * 100;
+  
   let recommendation = "";
-
   if(pct < 30){
-    recommendation = "Uptake is quite low. Consider lowering cost or adding more advanced features (e.g. advanced training, in-person).";
+    recommendation = "Uptake is low. Consider reducing the fee or adjusting programme features.";
   } else if(pct < 70){
-    recommendation = "Moderate uptake. Some improvements (e.g. reduce cost, switch to advanced or in-person) might further boost acceptance.";
+    recommendation = "Uptake is moderate. Small adjustments may further boost participation.";
   } else {
-    recommendation = "High uptake. This configuration appears effective for scaling FETP.";
+    recommendation = "Uptake is high. This configuration appears cost-effective.";
   }
-
+  
   document.getElementById("modalResults").innerHTML = `
     <h4>Calculation Results</h4>
     <p><strong>Predicted Uptake:</strong> ${pct.toFixed(2)}%</p>
     <p><em>Recommendation:</em> ${recommendation}</p>
   `;
   document.getElementById("resultModal").style.display = "block";
-
-  // update Probability chart & Cost–Benefit
+  
   renderFETPProbChart();
   renderFETPCostsBenefits();
 }
 
-/** close modal */
+/** Close modal */
 function closeModal(){
   document.getElementById("resultModal").style.display = "none";
 }
 
-/** WTP CHART with dynamic scale */
+/** Render WTP chart */
 let wtpChart = null;
 function renderWTPChart(){
   const ctx = document.getElementById("wtpChartMain").getContext("2d");
   if(!ctx) return;
   if(wtpChart) wtpChart.destroy();
-
-  // ratio => (coefficient / -costSlope) * scale
-  function ratio(coef){ return (coef / -mainCoefficients.cost)*100; }
-
+  
+  function ratio(coef){ return (coef / -mainCoefficients.cost) * 1; }
   const labels = [
     "Training: Advanced","Training: Frontline",
-    "Delivery: In-person","Delivery: Hybrid",
-    "Accred: Intl","Accred: National",
-    "Location: State","Location: Regional",
-    "Cohort +1(100)", "Cost +1"
+    "Training Model: Scholarship","Stipend Increment",
+    "Capacity Variation","Fee Increment"
   ];
-  // compute WTP
   const rawVals = [
     ratio(mainCoefficients.training_advanced),
     ratio(mainCoefficients.training_frontline),
-    ratio(mainCoefficients.delivery_inperson),
-    ratio(mainCoefficients.delivery_hybrid),
-    ratio(mainCoefficients.accreditation_international),
-    ratio(mainCoefficients.accreditation_national),
-    ratio(mainCoefficients.location_statelevel),
-    ratio(mainCoefficients.location_regional),
-    ratio(mainCoefficients.cohortsize),
-    -150
+    ratio(mainCoefficients.trainingModel_scholarship),
+    ratio(mainCoefficients.stipend_levels[1000]), // example: $500 -> $1000 difference
+    ratio(mainCoefficients.capacity_levels[100]),
+    ratio(mainCoefficients.cost) * 1000  // scaled example
   ];
-  // standard errors ~10%
   const errs = rawVals.map(v => Math.abs(v)*0.1);
-
-  // dynamic min & max
+  
   const minVal = Math.min(...rawVals);
   const maxVal = Math.max(...rawVals);
   const padding = 0.15;
-  const yMin = minVal >= 0 ? 0 : (minVal * (1 + (minVal < 0 ? padding : -padding)));
-  const yMax = maxVal <= 0 ? 0 : (maxVal * (1 + (maxVal > 0 ? padding : -padding)));
-
-  wtpChart = new Chart(ctx,{
+  const yMin = minVal >= 0 ? 0 : (minVal * (1 + padding));
+  const yMax = maxVal <= 0 ? 0 : (maxVal * (1 + padding));
+  
+  wtpChart = new Chart(ctx, {
     type: "bar",
     data: {
       labels,
@@ -261,10 +212,7 @@ function renderWTPChart(){
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        y: {
-          min: yMin,
-          max: yMax
-        }
+        y: { min: yMin, max: yMax }
       },
       plugins: {
         legend: { display: false },
@@ -306,20 +254,20 @@ function renderWTPChart(){
   });
 }
 
-/** Probability chart */
+/** Render predicted uptake (doughnut chart) */
 let probChartFETP = null;
 function renderFETPProbChart(){
   const sc = buildFETPScenario();
-  if(!sc) return; 
+  if(!sc) return;
   const fraction = computeFETPUptake(sc);
   const pct = fraction * 100;
-
+  
   const ctx = document.getElementById("probChartFETP").getContext("2d");
   if(probChartFETP) probChartFETP.destroy();
-  probChartFETP = new Chart(ctx,{
+  probChartFETP = new Chart(ctx, {
     type: "doughnut",
     data: {
-      labels: ["Uptake","Non-uptake"],
+      labels: ["Uptake", "Non-uptake"],
       datasets: [{
         data: [pct, 100 - pct],
         backgroundColor: ["#28a745","#dc3545"]
@@ -339,44 +287,48 @@ function renderFETPProbChart(){
   });
 }
 
-/** Cost & Benefit Chart */
+/** Render Cost–Benefit Chart */
 let cbaFETPChart = null;
 function renderFETPCostsBenefits(){
   const sc = buildFETPScenario();
   if(!sc) return;
-  const frac = computeFETPUptake(sc);
-  const pct = frac * 100;
-  const participants = 250 * frac;
-
+  const uptakeFraction = computeFETPUptake(sc);
+  const pct = uptakeFraction * 100;
+  const trainees = sc.annualCapacity; // number of participants equals selected capacity
+  
+  // QALY scenario: use selected value from dropdown
   let qVal = 0.05;
   const sel = document.getElementById("qalyFETPSelect");
   if(sel){
     if(sel.value === "low") qVal = 0.01;
     else if(sel.value === "high") qVal = 0.08;
   }
-  const totalCost = sc.costVal * participants * 10;
-  const totalQALY = participants * qVal;
+  
+  // Total cost: fee * number of trainees plus fixed cost based on literature (~$35,500)
+  const fixedCost = 35500;
+  const totalCost = sc.fee * trainees + fixedCost;
+  
+  // Total QALYs and monetised benefits
+  const totalQALY = trainees * qVal;
   const monetized = totalQALY * 50000;
   const netB = monetized - totalCost;
-
+  
   const container = document.getElementById("costsFETPResults");
   if(!container) return;
   let econAdvice = "";
   if(netB < 0){
-    econAdvice = "This scenario yields negative net benefit. Consider lower cost or a different configuration to improve cost-effectiveness.";
-  } else if(pct < 40){
-    econAdvice = "Even though net benefit is positive, uptake is below 40%. Possibly choose advanced training or in-person to increase participation.";
+    econAdvice = "The programme may not be cost-effective. Consider reducing the fee or revising programme features.";
+  } else if(netB < 50000){
+    econAdvice = "The configuration shows modest benefits. Further improvements could enhance cost-effectiveness.";
   } else {
-    econAdvice = "Uptake is reasonable and net benefit is positive. This scenario is a viable FETP option.";
+    econAdvice = "This configuration appears highly cost-effective.";
   }
-
+  
   container.innerHTML = `
     <div class="calculation-info">
-      <p><strong>Uptake:</strong> ${pct.toFixed(2)}%</p>
-      <p><strong>Participants:</strong> ${participants.toFixed(0)}</p>
+      <p><strong>Predicted Uptake:</strong> ${pct.toFixed(2)}%</p>
+      <p><strong>Number of Trainees:</strong> ${trainees}</p>
       <p><strong>Total Training Cost:</strong> $${totalCost.toFixed(2)}</p>
-      <p><strong>Cost per Participant:</strong> $${(totalCost/participants).toFixed(2)}</p>
-      <p><strong>Total QALYs:</strong> ${totalQALY.toFixed(2)}</p>
       <p><strong>Monetised Benefits:</strong> $${monetized.toLocaleString()}</p>
       <p><strong>Net Benefit:</strong> $${netB.toLocaleString()}</p>
       <p><em>Policy Recommendation:</em> ${econAdvice}</p>
@@ -388,11 +340,11 @@ function renderFETPCostsBenefits(){
   `;
   const ctx = document.getElementById("cbaFETPChart").getContext("2d");
   if(cbaFETPChart) cbaFETPChart.destroy();
-
-  cbaFETPChart = new Chart(ctx,{
+  
+  cbaFETPChart = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: ["Total Cost","Monetised Benefits","Net Benefit"],
+      labels: ["Total Cost", "Monetised Benefits", "Net Benefit"],
       datasets: [{
         label: "USD",
         data: [totalCost, monetized, netB],
@@ -402,11 +354,7 @@ function renderFETPCostsBenefits(){
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: false
-        }
-      },
+      scales: { y: { beginAtZero: false } },
       plugins: {
         title: {
           display: true,
@@ -419,13 +367,13 @@ function renderFETPCostsBenefits(){
   });
 }
 
-/** Toggle cost breakdown accordion display */
+/** Toggle detailed cost breakdown accordion */
 function toggleCostAccordion(){
   const acc = document.getElementById("detailedCostBreakdown");
   acc.style.display = (acc.style.display === "none" || acc.style.display === "") ? "block" : "none";
 }
 
-/** Toggle benefits analysis display */
+/** Toggle benefits explanation display */
 function toggleFETPBenefitsAnalysis(){
   const box = document.getElementById("detailedFETPBenefitsAnalysis");
   if(!box) return;
@@ -433,31 +381,30 @@ function toggleFETPBenefitsAnalysis(){
 }
 
 /***************************************************************************
- * SCENARIO saving & PDF export
+ * Scenario Saving & PDF Export
  ***************************************************************************/
 let savedFETPScenarios = [];
 function saveFETPScenario(){
   const sc = buildFETPScenario();
   if(!sc) return;
-  const fraction = computeFETPUptake(sc);
-  const pct = fraction * 100;
+  const uptakeFraction = computeFETPUptake(sc);
+  const pct = uptakeFraction * 100;
   sc.uptake = pct.toFixed(2);
   const netB = (pct * 1000).toFixed(2);
   sc.netBenefit = netB;
-
+  
   sc.name = `FETP Scenario ${savedFETPScenarios.length + 1}`;
   savedFETPScenarios.push(sc);
-
+  
   const tb = document.querySelector("#FETPScenarioTable tbody");
   const row = document.createElement("tr");
   row.innerHTML = `
     <td>${sc.name}</td>
-    <td>$${sc.costVal}</td>
-    <td>${sc.deliveryMethod}</td>
-    <td>${sc.accreditation}</td>
-    <td>${sc.location}</td>
-    <td>${sc.trainingLevel}</td>
-    <td>${sc.cohortSize}</td>
+    <td>$${sc.fee}</td>
+    <td>${sc.levelTraining}</td>
+    <td>${sc.trainingModel}</td>
+    <td>$${sc.stipendAmount}</td>
+    <td>${sc.annualCapacity}</td>
     <td>${sc.uptake}%</td>
     <td>$${sc.netBenefit}</td>
   `;
@@ -476,7 +423,7 @@ function exportFETPComparison(){
   doc.setFontSize(16);
   doc.text("FETP Scenarios Comparison", 105, yPos, { align:"center" });
   yPos += 10;
-
+  
   savedFETPScenarios.forEach((sc, idx) => {
     if(yPos + 60 > doc.internal.pageSize.getHeight() - 15){
       doc.addPage();
@@ -486,15 +433,14 @@ function exportFETPComparison(){
     doc.text(`Scenario ${idx + 1}: ${sc.name}`, 15, yPos);
     yPos += 7;
     doc.setFontSize(12);
-    doc.text(`Cost: $${sc.costVal}`, 15, yPos); yPos += 5;
-    doc.text(`Delivery: ${sc.deliveryMethod}`, 15, yPos); yPos += 5;
-    doc.text(`Accreditation: ${sc.accreditation}`, 15, yPos); yPos += 5;
-    doc.text(`Location: ${sc.location}`, 15, yPos); yPos += 5;
-    doc.text(`Training: ${sc.trainingLevel}`, 15, yPos); yPos += 5;
-    doc.text(`Cohort: ${sc.cohortSize}`, 15, yPos); yPos += 5;
+    doc.text(`Fee: $${sc.fee}`, 15, yPos); yPos += 5;
+    doc.text(`Level: ${sc.levelTraining}`, 15, yPos); yPos += 5;
+    doc.text(`Model: ${sc.trainingModel}`, 15, yPos); yPos += 5;
+    doc.text(`Stipend: $${sc.stipendAmount}`, 15, yPos); yPos += 5;
+    doc.text(`Capacity: ${sc.annualCapacity}`, 15, yPos); yPos += 5;
     doc.text(`Uptake: ${sc.uptake}%, Net Benefit: $${sc.netBenefit}`, 15, yPos);
     yPos += 10;
   });
-
+  
   doc.save("FETPScenarios_Comparison.pdf");
 }
